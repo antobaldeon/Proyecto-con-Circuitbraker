@@ -5,6 +5,7 @@ import com.examen1.order_service.client.ProductClient;
 import com.examen1.order_service.dto.OrderDetailResponse;
 import com.examen1.order_service.dto.OrderRequest;
 import com.examen1.order_service.dto.OrderResponse;
+import com.examen1.order_service.dto.StockUpdateRequest;
 import com.examen1.order_service.mapper.OrderMapper;
 import com.examen1.order_service.model.*;
 import com.examen1.order_service.repository.OrderRepository;
@@ -52,7 +53,14 @@ public class OrderServideImpl implements OrderService {
             detail.setPrecioUnitario(product.getPrecio());
 
             detalles.add(detail);
+            StockUpdateRequest stockRequest = new StockUpdateRequest();
+            stockRequest.setCantidad(detailRequest.getCantidad());
+            stockRequest.setTipo(request.getTipo().name());
+
+            inventoryClient.updateStock(detailRequest.getProductId(), stockRequest);
+
         }
+
 
         order.setDetalles(detalles);
 

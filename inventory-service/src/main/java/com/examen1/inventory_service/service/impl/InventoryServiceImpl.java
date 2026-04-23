@@ -3,6 +3,7 @@ package com.examen1.inventory_service.service.impl;
 import com.examen1.inventory_service.client.ProductClient;
 import com.examen1.inventory_service.dto.InventoryRequest;
 import com.examen1.inventory_service.dto.InventoryResponse;
+import com.examen1.inventory_service.dto.StockUpdateRequest;
 import com.examen1.inventory_service.mapper.InventoryMapper;
 import com.examen1.inventory_service.model.Inventory;
 import com.examen1.inventory_service.model.InventoryStatus;
@@ -72,6 +73,34 @@ public class InventoryServiceImpl implements InventoryService {
         response.setProductName(product.getNombre());
         return response;
     }
+    @Override
+    public InventoryResponse updateStock(Long productId, StockUpdateRequest request) {
+        Inventory inventory = repository.findByProductId(productId)
+                .orElseThrow(() -> new RuntimeException("Inventory not found for product"));
+
+        if ("SALIDA".equalsIgnoreCase(request.getTipo())) {
+            if (inventory.getStockActual() < request.getCantidad()) {
+                throw new RuntimeException("Insufficient stock");
+            }
+            inventory.setStockActual(inventory.getStockActual() - request.getCantidad());
+        }
+
+        if ("ENTRADA".equalsIgnoreCase(request.getTipo())) {
+            inventory.setStockActual(inventory.getStockActual() + request.getCantidad());
+        }
+
+        inventory.setEstado(calculateStatus(inventory.getStockActual(), inventory.getStockMinimo()));
+        inventory.setFechaActualizacion(LocalDateTime.now());
+
+        inventory = repository.save(inventory);
+
+        InventoryResponse response = mapper.toResponse(inventory);
+        Product product = productClient.findById(inventory.getProductId());
+        response.setProductName(product.getNombre());
+
+        return response;
+    }
+
 
     @Override
     public InventoryResponse update(Long id, InventoryRequest request) {
@@ -91,6 +120,7 @@ public class InventoryServiceImpl implements InventoryService {
         response.setProductName(product.getNombre());
         return response;
     }
+
 
     @Override
     public void delete(Long id) {

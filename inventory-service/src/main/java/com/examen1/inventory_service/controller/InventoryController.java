@@ -2,6 +2,7 @@ package com.examen1.inventory_service.controller;
 
 import com.examen1.inventory_service.dto.InventoryRequest;
 import com.examen1.inventory_service.dto.InventoryResponse;
+import com.examen1.inventory_service.dto.StockUpdateRequest;
 import com.examen1.inventory_service.service.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -52,5 +53,11 @@ public class InventoryController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+    @PutMapping("/product/{productId}/stock")
+    public ResponseEntity<InventoryResponse> updateStock(@PathVariable Long productId,
+                                                         @RequestBody StockUpdateRequest request) {
+        return ResponseEntity.ok(service.updateStock(productId, request));
+    }
+
 
 }

@@ -10,6 +10,8 @@ import com.examen1.order_service.mapper.OrderMapper;
 import com.examen1.order_service.model.*;
 import com.examen1.order_service.repository.OrderRepository;
 import com.examen1.order_service.service.service.OrderService;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,8 +25,8 @@ public class OrderServideImpl implements OrderService {
 
     private final OrderRepository repository;
     private final OrderMapper mapper;
-    private final ProductClient productClient;
-    private final InventoryClient inventoryClient;
+    private final ProductLookupService productLookupService;
+    private final InventoryLookupService inventoryLookupService;
 
     @Override
     public OrderResponse create(OrderRequest request) {
@@ -36,10 +38,10 @@ public class OrderServideImpl implements OrderService {
         List<OrderDetail> detalles = new ArrayList<>();
 
         for (var detailRequest : request.getDetalles()) {
-            Product product = productClient.findById(detailRequest.getProductId());
+            Product product = productLookupService.getProductById(detailRequest.getProductId());
 
             if (request.getTipo() == OrderType.SALIDA) {
-                Inventory inventory = inventoryClient.findByProductId(detailRequest.getProductId());
+                Inventory inventory = inventoryLookupService.getInventoryByProductId(detailRequest.getProductId());
 
                 if (inventory.getStockActual() < detailRequest.getCantidad()) {
                     throw new RuntimeException("Insufficient stock for product: " + product.getNombre());
@@ -57,7 +59,7 @@ public class OrderServideImpl implements OrderService {
             stockRequest.setCantidad(detailRequest.getCantidad());
             stockRequest.setTipo(request.getTipo().name());
 
-            inventoryClient.updateStock(detailRequest.getProductId(), stockRequest);
+            inventoryLookupService.updateInventoryStock(detailRequest.getProductId(), stockRequest);
 
         }
 
@@ -77,7 +79,7 @@ public class OrderServideImpl implements OrderService {
 
         if (response.getDetalles() != null) {
             for (OrderDetailResponse detailResponse : response.getDetalles()) {
-                Product product = productClient.findById(detailResponse.getProductId());
+                Product product = productLookupService.getProductById(detailResponse.getProductId());
                 detailResponse.setProductName(product.getNombre());
             }
         }
@@ -94,7 +96,7 @@ public class OrderServideImpl implements OrderService {
 
                     if (response.getDetalles() != null) {
                         for (OrderDetailResponse detailResponse : response.getDetalles()) {
-                            Product product = productClient.findById(detailResponse.getProductId());
+                            Product product = productLookupService.getProductById(detailResponse.getProductId());
                             detailResponse.setProductName(product.getNombre());
                         }
                     }
@@ -113,11 +115,13 @@ public class OrderServideImpl implements OrderService {
 
         if (response.getDetalles() != null) {
             for (OrderDetailResponse detailResponse : response.getDetalles()) {
-                Product product = productClient.findById(detailResponse.getProductId());
+                Product product = productLookupService.getProductById(detailResponse.getProductId());
                 detailResponse.setProductName(product.getNombre());
             }
         }
 
         return response;
     }
+
+
 }

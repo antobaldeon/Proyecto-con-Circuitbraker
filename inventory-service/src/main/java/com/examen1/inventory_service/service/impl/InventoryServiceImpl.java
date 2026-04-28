@@ -22,11 +22,12 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository repository;
     private final InventoryMapper mapper;
-    private final ProductClient productClient;
+    private final ProductLookupService productLookupService;
+
 
     @Override
     public InventoryResponse create(InventoryRequest request) {
-        Product product = productClient.findById(request.getProductId());
+        Product product = productLookupService.getProductById(request.getProductId());
 
         Inventory inventory = mapper.toEntity(request);
         inventory.setEstado(calculateStatus(request.getStockActual(), request.getStockMinimo()));
@@ -45,7 +46,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .stream()
                 .map(inventory -> {
                     InventoryResponse response = mapper.toResponse(inventory);
-                    Product product = productClient.findById(inventory.getProductId());
+                    Product product = productLookupService.getProductById(inventory.getProductId());
                     response.setProductName(product.getNombre());
                     return response;
                 })
@@ -55,7 +56,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public InventoryResponse getById(Long id) {
         Inventory inventory = findInventory(id);
-        Product product = productClient.findById(inventory.getProductId());
+        Product product = productLookupService.getProductById(inventory.getProductId());
 
         InventoryResponse response = mapper.toResponse(inventory);
         response.setProductName(product.getNombre());
@@ -67,7 +68,7 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = repository.findByProductId(productId)
                 .orElseThrow(() -> new RuntimeException("Inventory not found for product"));
 
-        Product product = productClient.findById(inventory.getProductId());
+        Product product = productLookupService.getProductById(inventory.getProductId());
 
         InventoryResponse response = mapper.toResponse(inventory);
         response.setProductName(product.getNombre());
@@ -95,7 +96,7 @@ public class InventoryServiceImpl implements InventoryService {
         inventory = repository.save(inventory);
 
         InventoryResponse response = mapper.toResponse(inventory);
-        Product product = productClient.findById(inventory.getProductId());
+        Product product = productLookupService.getProductById(inventory.getProductId());
         response.setProductName(product.getNombre());
 
         return response;
@@ -105,7 +106,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     public InventoryResponse update(Long id, InventoryRequest request) {
         Inventory inventory = findInventory(id);
-        Product product = productClient.findById(request.getProductId());
+        Product product = productLookupService.getProductById(request.getProductId());
 
         inventory.setProductId(request.getProductId());
         inventory.setStockActual(request.getStockActual());
@@ -127,6 +128,7 @@ public class InventoryServiceImpl implements InventoryService {
         Inventory inventory = findInventory(id);
         repository.delete(inventory);
     }
+
 
     private Inventory findInventory(Long id) {
         return repository.findById(id)
